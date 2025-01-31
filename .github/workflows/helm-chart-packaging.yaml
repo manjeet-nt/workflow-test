@@ -74,7 +74,8 @@ jobs:
       - name: Package Helm Chart
         run: |
           cd ${{ env.CHART_PATH }}
-          helm package . --app-version $(grep 'version:' Chart.yaml | awk '{print $2}')
+          CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          helm package . --app-version ${CHART_VERSION}
           ls
           mv *.tgz ../../
 
