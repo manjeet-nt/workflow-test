@@ -30,10 +30,16 @@ jobs:
           cd ${{ env.CHART_PATH }}
           helm lint .
 
-      # - name: Run Helm Tests
-      #   run: |
-      #     cd ${{ env.CHART_PATH }}
-      #     helm test .
+      - name: Run Helm Tests (only if tests are present)
+        run: |
+          cd ${{ env.CHART_PATH }}
+          if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+            echo "Tests found. Running Helm tests..."
+            helm test .
+          else
+            echo "No tests found. Skipping Helm tests."
+          fi
+
 
       # - name: Check Backward Compatibility
       #   id: backward-compatibility
@@ -93,6 +99,12 @@ jobs:
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
+
+      - name: Debug Trivy Scan Output
+        run: |
+          echo "Checking if trivy-results.txt exists..."
+          ls -lh trivy-results.txt || echo "❌ No Trivy report found!"
+
 
       # - name: Set up JFrog CLI
       #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
