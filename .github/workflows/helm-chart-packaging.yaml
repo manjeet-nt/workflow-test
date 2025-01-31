@@ -15,10 +15,17 @@ jobs:
       - name: Determine Chart Path
         id: chart-path
         run: |
-          # Here, you can determine the chart path dynamically, for example, by looking at modified files in the PR
-          echo "Chart path: $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)"
-          echo "chart_path=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)" >> $GITHUB_ENV
-
+          # Get the chart path from the diff between the previous and current commit
+          CHART_PATH=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '.*Chart.yaml' | head -n 1)
+          if [ -z "$CHART_PATH" ]; then
+            echo "No Helm charts found in this PR."
+            exit 1
+          else
+            # Extract the directory path
+            DIR_PATH=$(dirname "$CHART_PATH")
+            echo "Chart path: $DIR_PATH"
+            echo "chart_path=$DIR_PATH" >> $GITHUB_ENV
+          fi
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
