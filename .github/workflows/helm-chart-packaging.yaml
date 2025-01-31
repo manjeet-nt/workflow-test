@@ -8,17 +8,11 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      CHART_PATH: "charts/karpenter-nodes/" 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Determine Chart Path
-        id: chart-path
-        run: |
-          # Here, you can determine the chart path dynamically, for example, by looking at modified files in the PR
-          echo "Chart path: $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)"
-          echo "chart_path=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)" >> $GITHUB_ENV
-
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
@@ -27,23 +21,30 @@ jobs:
 
       - name: Update Helm Dependencies
         run: |
-          cd ${{ env.chart_path }}
+          cd ${{ env.CHART_PATH }}
           helm dependency update
 
       - name: Lint Helm Chart
         run: |
-          cd ${{ env.chart_path }}
+
+          cd ${{ env.CHART_PATH }}
           helm lint .
 
-      - name: Run Helm Tests
+      - name: Run Helm Tests (only if tests are present)
         run: |
-          cd ${{ env.chart_path }}
-          helm test .
+          cd ${{ env.CHART_PATH }}
+          if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+            echo "Tests found. Running Helm tests..."
+            helm test .
+          else
+            echo "No tests found. Skipping Helm tests."
+          fi
+
 
       # - name: Check Backward Compatibility
       #   id: backward-compatibility
       #   run: |
-      #     cd ${{ env.chart_path }}
+      #     cd ${{ env.CHART_PATH }}
 
       #     # Fetch the previous version of the chart from JFrog Artifactory
       #     PREVIOUS_VERSION=$(helm show chart . | grep 'version:' | awk '{print $2}' | awk -F. '{print $1"."$2"."$3-1}')
@@ -70,30 +71,26 @@ jobs:
 
       - name: Install Helm Docs
         run: |
-          HELM_DOCS_VERSION="1.14.2
-          OS=$(uname | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.tar.gz"
+          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz
           tar -xzf helm-docs.tar.gz
           chmod +x helm-docs
           mv helm-docs /usr/local/bin/
-
-      - name: Generate Helm Docs
-        run: helm-docs .${{ env.chart_path }}
+          helm-docs ${{ env.CHART_PATH }}
 
       - name: Package Helm Chart
         run: |
-          cd ${{ env.chart_path }}
-          helm package . --app-version $(grep 'version:' Chart.yaml | awk '{print $2}')
+          cd ${{ env.CHART_PATH }}
+          CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
+          helm package . --app-version ${CHART_VERSION}
           ls
-          mv *.tgz ../../
+
 
       - name: Run Trivy vulnerability scanner in IaC mode
         id: trivy
         uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           scan-type: 'config'
-          scan-ref: './*.tgz'  # Scan the packaged chart
+          scan-ref: '${{ env.CHART_PATH }}karpenter-nodes-0.0.2.tgz'  # Scan the packaged chart
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -103,23 +100,31 @@ jobs:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
 
+      - name: Debug Trivy Scan Output
+        run: |
+          echo "Checking if trivy-results.txt exists..."
+          ls -lh trivy-results.txt || echo "❌ No Trivy report found!"
+          cat trivy-results.txt
+
+
       # - name: Set up JFrog CLI
       #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
 
-      - name: Configure JFrog CLI
-        env:
-          ARTIFACTORY_API_TOKEN: ${{ secrets.artifactory_api_token }}
-          JFROG_URL: ${{ env.jfrog_url }}
-        run: |
+      # - name: Configure JFrog CLI
+      #   env:
+      #     ARTIFACTORY_API_TOKEN: ${{ secrets.artifactory_api_token }}
+      #     JFROG_URL: ${{ env.jfrog_url }}
+      #   run: |
 
-          echo "${ARTIFACTORY_API_TOKEN}" | jf config add test \
-            --url="${JFROG_URL}" \
-            --interactive=false \
-            --access-token-stdin
+      #     echo "${ARTIFACTORY_API_TOKEN}" | jf config add test \
+      #       --url="${JFROG_URL}" \
+      #       --interactive=false \
+      #       --access-token-stdin
 
       # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
       #   run: |
-      #     CHART_VERSION=$(grep 'version:' Chart.yaml | awk '{print $2}')
+      #     cd ${{ env.CHART_PATH }}
+      #     CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
       #     CHART_NAME=$(grep 'name:' Chart.yaml | awk '{print $2}')
       #     if jf rt s "helm-local/${CHART_NAME}-${CHART_VERSION}.tgz" | grep -q "${CHART_NAME}-${CHART_VERSION}.tgz"; then
       #       echo "❌ Helm chart ${CHART_NAME} version ${CHART_VERSION} already exists in JFrog. Please update the version before pushing."

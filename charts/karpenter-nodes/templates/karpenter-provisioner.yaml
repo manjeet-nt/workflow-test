@@ -1,0 +1,72 @@
+---
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: workloads
+spec:
+  template:
+    metadata:
+      labels:
+        node-restriction.kubernetes.io/workloads: "true"
+    spec:
+      nodeClassRef:
+        apiVersion: karpenter.k8s.aws/v1beta1
+        kind: EC2NodeClass
+        name: default
+      taints:
+        - key: node-restriction.kubernetes.io/workloads
+          effect: NoSchedule
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["2"]
+        {{- with .Values.nodePoolRequirements }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+  {{- if .Values.disruption }}
+  disruption:
+    {{- if .Values.disruption.consolidationPolicy }}
+    consolidationPolicy: {{ .Values.disruption.consolidationPolicy }}
+    {{- end }}
+    {{- if .Values.disruption.expireAfter }}
+    expireAfter: {{ .Values.disruption.expireAfter }}
+    {{- end }}
+    {{- if .Values.disruption.budgets }}
+    budgets:
+      {{- range .Values.disruption.budgets }}
+      - nodes: "{{ .nodes }}"
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+---
+apiVersion: karpenter.k8s.aws/v1beta1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  role: "{{ .Values.nodeClassRole }}"
+  amiFamily: AL2
+  amiSelectorTerms:
+    - id: ami-0515f3963c203d061
+  subnetSelectorTerms:
+    - tags:
+        Name: "*-private-*"
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "eks-*-sg-libre-*"
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+  detailedMonitoring: true
+  tags: {{ .Values.nodeClassTags | toYaml | nindent 4 }}
