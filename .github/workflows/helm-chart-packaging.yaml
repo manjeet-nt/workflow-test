@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      CHART_PATH: "charts/promtail/" 
+      CHART_PATH: "charts/karpenter-nodes/" 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
