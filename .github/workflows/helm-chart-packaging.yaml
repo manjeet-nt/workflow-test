@@ -65,8 +65,7 @@ jobs:
 
       - name: Install Helm Docs
         run: |
-          HELM_DOCS_VERSION="1.14.2
-          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_linux_amd64.tar.gz"
+          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_linux_amd64.tar.gz"
           tar -xzf helm-docs.tar.gz
           chmod +x helm-docs
           mv helm-docs /usr/local/bin/
