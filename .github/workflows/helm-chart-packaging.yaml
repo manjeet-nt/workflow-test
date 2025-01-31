@@ -1,16 +1,154 @@
-name: Use Helm Chart Packaging Workflow
+name: Package Helm Chart
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
-      - main
+      - main  # Trigger on PR creation or updates to main branch
 
 jobs:
-  call-helm-packaging:
-    uses: NethermindEth/github-workflows/.github/workflows/package-helm-chart.yaml@add/workflow/chart-packaging
-    with:
-      chart_path: ".promtail/"
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
+      - name: Determine Chart Path
+        id: chart-path
+        run: |
+          # Here, you can determine the chart path dynamically, for example, by looking at modified files in the PR
+          echo "Chart path: $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)"
+          echo "chart_path=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'charts' | head -n 1)" >> $GITHUB_ENV
+
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: latest
+
+      - name: Update Helm Dependencies
+        run: |
+          cd ${{ env.chart_path }}
+          helm dependency update
+
+      - name: Lint Helm Chart
+        run: |
+          cd ${{ env.chart_path }}
+          helm lint .
+
+      - name: Run Helm Tests
+        run: |
+          cd ${{ env.chart_path }}
+          helm test .
+
+      # - name: Check Backward Compatibility
+      #   id: backward-compatibility
+      #   run: |
+      #     cd ${{ env.chart_path }}
+
+      #     # Fetch the previous version of the chart from JFrog Artifactory
+      #     PREVIOUS_VERSION=$(helm show chart . | grep 'version:' | awk '{print $2}' | awk -F. '{print $1"."$2"."$3-1}')
+      #     CHART_NAME=$(grep 'name:' Chart.yaml | awk '{print $2}')
+      #     jf rt dl "helm-local/my-chart-$PREVIOUS_VERSION.tgz" --flat
+
+      #     if [[ -f "my-chart-$PREVIOUS_VERSION.tgz" ]]; then
+      #       echo "Previous version ($PREVIOUS_VERSION) found. Checking for backward compatibility..."
+
+      #       # Render templates for the new and previous versions
+      #       helm template . > new-version.yaml
+      #       helm template $CHART_NAME-$PREVIOUS_VERSION.tgz > previous-version.yaml
+
+      #       # Compare the rendered templates
+      #       if ! diff -u previous-version.yaml new-version.yaml; then
+      #         echo "❌ Backward-incompatible changes detected!"
+      #         exit 1
+      #       else
+      #         echo "✅ No backward-incompatible changes detected."
+      #       fi
+      #     else
+      #       echo "No previous version found. Skipping backward compatibility check."
+      #     fi
+
+      - name: Install Helm Docs
+        run: |
+          HELM_DOCS_VERSION="1.14.2
+          OS=$(uname | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.tar.gz"
+          tar -xzf helm-docs.tar.gz
+          chmod +x helm-docs
+          mv helm-docs /usr/local/bin/
+
+      - name: Generate Helm Docs
+        run: helm-docs .${{ env.chart_path }}
+
+      - name: Package Helm Chart
+        run: |
+          cd ${{ env.chart_path }}
+          helm package . --app-version $(grep 'version:' Chart.yaml | awk '{print $2}')
+          ls
+          mv *.tgz ../../
+
+      - name: Run Trivy vulnerability scanner in IaC mode
+        id: trivy
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        with:
+          scan-type: 'config'
+          scan-ref: './*.tgz'  # Scan the packaged chart
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          output: 'trivy-results.txt'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_DISABLE_VEX_NOTICE: true
+
+      # - name: Set up JFrog CLI
+      #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
+
+      - name: Configure JFrog CLI
+        env:
+          ARTIFACTORY_API_TOKEN: ${{ secrets.artifactory_api_token }}
+          JFROG_URL: ${{ env.jfrog_url }}
+        run: |
+
+          echo "${ARTIFACTORY_API_TOKEN}" | jf config add test \
+            --url="${JFROG_URL}" \
+            --interactive=false \
+            --access-token-stdin
+
+      # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
+      #   run: |
+      #     CHART_VERSION=$(grep 'version:' Chart.yaml | awk '{print $2}')
+      #     CHART_NAME=$(grep 'name:' Chart.yaml | awk '{print $2}')
+      #     if jf rt s "helm-local/${CHART_NAME}-${CHART_VERSION}.tgz" | grep -q "${CHART_NAME}-${CHART_VERSION}.tgz"; then
+      #       echo "❌ Helm chart ${CHART_NAME} version ${CHART_VERSION} already exists in JFrog. Please update the version before pushing."
+      #       exit 1
+      #     else
+      #       echo "✅ Helm chart version ${CHART_VERSION} is not found in JFrog. Proceeding with upload..."
+      #       jf rt u "*.tgz" "helm-local/"
+      #     fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Publish Status" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Helm chart published successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Helm chart publishing failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "### Trivy Scan Output" >> $GITHUB_STEP_SUMMARY
+          if [[ -f trivy-results.txt ]]; then
+            echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            while IFS= read -r line; do
+              if [[ $line == "┌"* ]]; then echo '```' >> $GITHUB_STEP_SUMMARY; fi
+              echo "$line" >> $GITHUB_STEP_SUMMARY
+              if [[ $line == *"┘" ]]; then echo '```' >> $GITHUB_STEP_SUMMARY; fi
+            done < trivy-results.txt
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No Trivy report found." >> $GITHUB_STEP_SUMMARY
+          fi
