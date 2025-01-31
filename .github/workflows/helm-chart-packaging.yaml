@@ -84,7 +84,7 @@ jobs:
         uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           scan-type: 'config'
-          scan-ref: '${{ env.CHART_PATH }}/*.tgz'  # Scan the packaged chart
+          scan-ref: '${{ env.CHART_PATH }}/promtail-6.15.4.tgz'  # Scan the packaged chart
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
