@@ -104,6 +104,7 @@ jobs:
         run: |
           echo "Checking if trivy-results.txt exists..."
           ls -lh trivy-results.txt || echo "❌ No Trivy report found!"
+          cat trivy-results.txt
 
 
       # - name: Set up JFrog CLI
