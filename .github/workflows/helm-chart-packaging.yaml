@@ -69,9 +69,7 @@ jobs:
           tar -xzf helm-docs.tar.gz
           chmod +x helm-docs
           mv helm-docs /usr/local/bin/
-
-      - name: Generate Helm Docs
-        run: helm-docs ${{ env.CHART_PATH }}
+          helm-docs ${{ env.CHART_PATH }}
 
       - name: Package Helm Chart
         run: |
