@@ -77,14 +77,14 @@ jobs:
           CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
           helm package . --app-version ${CHART_VERSION}
           ls
-          mv *.tgz ../../
+
 
       - name: Run Trivy vulnerability scanner in IaC mode
         id: trivy
         uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           scan-type: 'config'
-          scan-ref: './*.tgz'  # Scan the packaged chart
+          scan-ref: '${{ env.CHART_PATH }}*.tgz'  # Scan the packaged chart
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -110,7 +110,8 @@ jobs:
 
       # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
       #   run: |
-      #     CHART_VERSION=$(grep 'version:' Chart.yaml | awk '{print $2}')
+      #     cd ${{ env.CHART_PATH }}
+      #     CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
       #     CHART_NAME=$(grep 'name:' Chart.yaml | awk '{print $2}')
       #     if jf rt s "helm-local/${CHART_NAME}-${CHART_VERSION}.tgz" | grep -q "${CHART_NAME}-${CHART_VERSION}.tgz"; then
       #       echo "❌ Helm chart ${CHART_NAME} version ${CHART_VERSION} already exists in JFrog. Please update the version before pushing."
