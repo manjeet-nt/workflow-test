@@ -71,7 +71,7 @@ jobs:
           mv helm-docs /usr/local/bin/
 
       - name: Generate Helm Docs
-        run: helm-docs .${{ env.CHART_PATH }}
+        run: helm-docs ${{ env.CHART_PATH }}
 
       - name: Package Helm Chart
         run: |
