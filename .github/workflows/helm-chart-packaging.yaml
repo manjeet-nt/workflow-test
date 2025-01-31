@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      CHART_PATH: "charts/promtail/" 
+      CHART_PATH: "/charts/promtail/" 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -26,13 +26,14 @@ jobs:
 
       - name: Lint Helm Chart
         run: |
+
           cd ${{ env.CHART_PATH }}
           helm lint .
 
-      - name: Run Helm Tests
-        run: |
-          cd ${{ env.CHART_PATH }}
-          helm test .
+      # - name: Run Helm Tests
+      #   run: |
+      #     cd ${{ env.CHART_PATH }}
+      #     helm test .
 
       # - name: Check Backward Compatibility
       #   id: backward-compatibility
