@@ -12,5 +12,5 @@ sources:
 icon: https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png
 dependencies:
   - name: promtail
-    version: 6.15.3
+    version: 6.15.4
     repository: https://grafana.github.io/helm-charts
