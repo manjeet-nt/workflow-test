@@ -66,11 +66,7 @@ jobs:
       - name: Install Helm Docs
         run: |
           HELM_DOCS_VERSION="1.14.2
-          OS=$(uname | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-          echo https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.tar.gz
-          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_${OS}_${ARCH}.tar.gz
-          echo "---$(ls)--"
+          curl -sSLo helm-docs.tar.gz https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_linux_amd64.tar.gz"
           tar -xzf helm-docs.tar.gz
           chmod +x helm-docs
           mv helm-docs /usr/local/bin/
