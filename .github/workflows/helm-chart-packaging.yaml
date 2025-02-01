@@ -86,6 +86,8 @@ jobs:
 
       - name: Increament chart version if user forgot
         run: |
+          # Ensure we have the main branch history
+          git fetch origin main --depth=1  
           PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}Chart.yaml | grep '^version:' | awk '{print $2}')
           echo "Previous Chart Version: $PREVIOUS_VERSION"
           if [[ "$PREVIOUS_VERSION" != "$CHART_VERSION" ]]; then
