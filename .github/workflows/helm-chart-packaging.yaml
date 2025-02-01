@@ -83,9 +83,9 @@ jobs:
         run: |
           cd ${{ env.CHART_PATH }}
           # CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
-          echo "CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}') >> $GITHUB_ENV
+          echo "CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
           # CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
-          echo "CHART_NAME=$(grep '^version:' Chart.yaml | awk '{print $2}') >> $GITHUB_ENV
+          echo "CHART_NAME=$(grep '^version:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
           helm package . --app-version ${CHART_VERSION}
           ls
 
