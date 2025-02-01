@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CHART_PATH: "charts/karpenter-nodes/"
-      CHART_NAME: ""
-      CHART_VERSION: "" 
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -49,9 +48,9 @@ jobs:
       #     cd ${{ env.CHART_PATH }}
 
       #     # Fetch the previous version of the chart from JFrog Artifactory
-      #     PREVIOUS_VERSION=$(helm show chart . | grep 'version:' | awk '{print $2}' | awk -F. '{print $1"."$2"."$3-1}')
+      #     PREVIOUS_VERSION=$(helm show chart . | grep '^version:' | awk '{print $2}' | awk -F. '{print $1"."$2"."$3-1}')
       #     CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
-      #     jf rt dl "helm-local/my-chart-$PREVIOUS_VERSION.tgz" --flat
+      #     jf rt dl "helm-local/$CHART_NAME-$PREVIOUS_VERSION.tgz" --flat
 
       #     if [[ -f "my-chart-$PREVIOUS_VERSION.tgz" ]]; then
       #       echo "Previous version ($PREVIOUS_VERSION) found. Checking for backward compatibility..."
@@ -90,31 +89,27 @@ jobs:
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_VERSION=$CHART_VERSION"
 
-      # - name: Package Helm Chart
-      #   run: |
-      #     cd ${{ env.CHART_PATH }}
-      #     # CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')
-      #     echo "CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
-      #     # CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
-      #     echo "CHART_NAME=$(grep '^version:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
-      #     helm package . --app-version ${CHART_VERSION}
-      #     ls
+      - name: Package Helm Chart
+        run: |
+          cd ${{ env.CHART_PATH }}
+          helm package . --app-version ${CHART_VERSION}
+          ls -la
 
 
-      # - name: Run Trivy vulnerability scanner in IaC mode
-      #   id: trivy
-      #   uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
-      #   with:
-      #     scan-type: 'config'
-      #     scan-ref: '${{ env.CHART_PATH }}${{ env.CHART_NAME }}-${{ env.CHART_VERSION }}.tgz'  # Scan the packaged chart
-      #     format: 'table'
-      #     exit-code: '1'
-      #     ignore-unfixed: true
-      #     severity: 'CRITICAL,HIGH'
-      #     output: 'trivy-results.txt'
-      #   env:
-      #     TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-      #     TRIVY_DISABLE_VEX_NOTICE: true
+      - name: Run Trivy vulnerability scanner in IaC mode
+        id: trivy
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        with:
+          scan-type: 'config'
+          scan-ref: '${{ env.CHART_PATH }}${{ env.CHART_NAME }}-${{ env.CHART_VERSION }}.tgz'  # Scan the packaged chart
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          output: 'trivy-results.txt'
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_DISABLE_VEX_NOTICE: true
 
 
 
