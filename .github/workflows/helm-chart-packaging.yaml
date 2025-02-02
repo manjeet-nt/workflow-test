@@ -113,7 +113,8 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add charts/karpenter-nodes/Chart.yaml
+          git checkout $GITHUB_HEAD_REF  # Checkout the PR branch
+          git add ${{ env.CHART_PATH }}Chart.yaml
           git commit -m "Auto incremented chart version"
           git push
 
