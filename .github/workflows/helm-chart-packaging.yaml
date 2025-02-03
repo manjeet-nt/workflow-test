@@ -111,6 +111,7 @@ jobs:
           if [[ "$PREVIOUS_VERSION" != "$CHART_VERSION" ]]; then
             echo "Chart version has changed!"
           else
+            echo " before Updated version : ${{ env.CHART_VERSION}}"
             # Split the version into major, minor, and patch components
             IFS='.' read -r -a VERSION_PARTS <<< "$CHART_VERSION"
             
@@ -120,7 +121,8 @@ jobs:
 
             # Construct the new version
             CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            sed -i '' "s/^version: .*/version: ${{ env.CHART_VERSION }}/" ${{ env.CHART_PATH }}Chart.yaml
+            echo "Updated version : ${{ env.CHART_VERSION}}"
+            sed -i "s/^version: .*/version: ${{ env.CHART_VERSION }}/" ${{ env.CHART_PATH }}Chart.yaml
             echo "Updated Chart Minor Version in Chart.yaml"
             echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
             echo "VERSION_INCREMENTED=true" >> $GITHUB_ENV  # Set flag if version was incremented
