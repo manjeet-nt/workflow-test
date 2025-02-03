@@ -163,7 +163,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-          output: '${{ github.workspace }}/trivy-results.txt'  # Save it in workspace
+          output: 'trivy-results.sarif'  # Save it in workspace
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
@@ -206,11 +206,11 @@ jobs:
           fi
 
           echo "### Trivy Scan Output" >> $GITHUB_STEP_SUMMARY
-          if [[ -s '${{ github.workspace }}/trivy-results.txt' ]]; then
+          if [[ -s 'trivy-results.sarif' ]]; then
             echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat '${{ github.workspace }}/trivy-results.txt' >> $GITHUB_STEP_SUMMARY  # Directly append file content
+            cat trivy-results.sarif >> $GITHUB_STEP_SUMMARY  # Directly append file content
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "</details>" >> $GITHUB_STEP_SUMMARY
           else
