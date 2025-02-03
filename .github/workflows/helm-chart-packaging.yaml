@@ -119,6 +119,9 @@ jobs:
             PATCH_VERSION=${VERSION_PARTS[2]}
             ((PATCH_VERSION++))
 
+            echo "CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"" >> $GITHUB_ENV
+            echo "up chart version - ${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+            
             # Construct the new version
             CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
             echo "Updated version : ${{ env.CHART_VERSION}}"
