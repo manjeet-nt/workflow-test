@@ -59,11 +59,11 @@ jobs:
             echo "No tests found. Skipping Helm tests."
           fi
 
-      - name: Set Environment Variables from ${{ input.CHART_FILENAME}}
+      - name: Set Environment Variables from ${{ inputs.CHART_FILENAME}}
         run: |
           cd ${{ inputs.CHART_PATH }}
-          echo "CHART_NAME=$(grep '^name:' ${{ input.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
-          echo "CHART_VERSION=$(grep '^version:' ${{ input.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_NAME=$(grep '^name:' ${{ inputs.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_VERSION=$(grep '^version:' ${{ inputs.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
 
       # - name: Set up JFrog CLI
       #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
@@ -87,7 +87,7 @@ jobs:
 
       #     # Fetch the previous version of the chart from JFrog Artifactory
       #     git fetch origin main --depth=1  
-      #     PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')
+      #     PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ inputs.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')
       #     jf rt dl "helm-local/${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" --flat
 
       #     if [[ -f "${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" ]]; then
@@ -118,7 +118,7 @@ jobs:
 
       - name: Increament chart version if user forgot
         run: |
-          PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ input.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
+          PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ inputs.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
           echo "Previous Chart Version: $PREVIOUS_VERSION"
           if [[ "$PREVIOUS_VERSION" != "$CHART_VERSION" ]]; then
             echo "Chart version has changed!"
@@ -137,20 +137,20 @@ jobs:
             # Construct the new version
 
             echo "Updated version : ${{ env.CHART_VERSION}}"
-            sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}
-            echo "Updated Chart Minor Version in ${{ input.CHART_FILENAME}}"
+            sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ env.CHART_PATH }}${{ inputs.CHART_FILENAME}}
+            echo "Updated Chart Minor Version in ${{ inputs.CHART_FILENAME}}"
             echo "CHART_VERSION=$UPDATED_CHART_VERSION" >> $GITHUB_ENV
             echo "VERSION_INCREMENTED=true" >> $GITHUB_ENV  # Set flag if version was incremented
           fi
 
-      - name: Commit updated ${{ input.CHART_FILENAME}}
+      - name: Commit updated ${{ inputs.CHART_FILENAME}}
         if: env.VERSION_INCREMENTED == 'true' && github.event_name == 'pull_request'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git fetch origin 
           git checkout $GITHUB_HEAD_REF  # Checkout the PR branch
-          git add ${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}
+          git add ${{ env.CHART_PATH }}${{ inputs.CHART_FILENAME}}
           git status
           git commit -m "Auto incremented chart version to ${{ env.CHART_VERSION}}"
           git push origin $GITHUB_HEAD_REF 
