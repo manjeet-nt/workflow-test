@@ -46,6 +46,11 @@ jobs:
           cd ${{ inputs.CHART_PATH }}
           helm dependency update
 
+      - name: debug
+        run: |
+          pwd
+          ls -la
+
       - name: Lint Helm Chart
         run: |
           cd ${{ inputs.CHART_PATH }}
