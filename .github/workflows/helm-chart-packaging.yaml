@@ -168,12 +168,6 @@ jobs:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
 
-      - name: debug
-        id: debug
-        run: |
-          echo "trivy-results.sarif"
-          cat trivy-results.sarif
-          echo "end"
 
       # - name: Set up JFrog CLI
       #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
@@ -204,22 +198,21 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### Publish Status" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ job.status }}" == "success" ]]; then
-            echo "✅ Helm chart published successfully" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Helm chart published successfully"
           else
-            echo "❌ Helm chart publishing failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Helm chart publishing failed" 
           fi
 
-          echo "### Trivy Scan Output" >> $GITHUB_STEP_SUMMARY
+          echo "### Trivy Scan Output" 
           if [[ -s 'trivy-results.sarif' ]]; then
-            echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat trivy-results.sarif >> $GITHUB_STEP_SUMMARY  # Directly append file content
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "</details>" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Click to expand</summary>" 
+            echo "" 
+            echo '```' 
+            cat trivy-results.sarif 
+            echo '```'
+            echo "</details>" 
           else
-            echo "✅ No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+            echo "✅ No vulnerabilities found." 
           fi
 
