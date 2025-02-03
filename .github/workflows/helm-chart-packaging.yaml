@@ -172,7 +172,7 @@ jobs:
           TRIVY_DISABLE_VEX_NOTICE: true
 
       - name: merge trivy scan and diff result in single file to show it on PR marocchino/sticky-pull-request-comment
-        id: merge trivy scan and diff file
+        id: merge_trivy_and_diff_output
         run: |
           # Write Trivy result and diff into the output file in one go
           {
