@@ -82,13 +82,12 @@ jobs:
       #       helm template . > new-version.yaml
       #       helm template ${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz > previous-version.yaml
 
-      #       # Compare the rendered templates
-      #       if ! diff -u previous-version.yaml new-version.yaml; then
-      #         echo "❌ Backward-incompatible changes detected!"
-      #         exit 1
-      #       else
-      #         echo "✅ No backward-incompatible changes detected."
-      #       fi
+      #       echo "Differences in the both charts template "
+      #       diff -u previous-version.yaml new-version.yaml | awk '
+      #       /^-/ { last_removed=$0; print last_removed; next }
+      #       /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
+      #       '
+
       #     else
       #       echo "No previous version found. Skipping backward compatibility check."
       #     fi
@@ -142,7 +141,7 @@ jobs:
           git status
           git commit -m "Auto incremented chart version to ${{ env.CHART_VERSION}}"
           git push origin $GITHUB_HEAD_REF 
-          # git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git HEAD:$GITHUB_HEAD_REF
+          # git push https://x-access-token:${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:$GITHUB_HEAD_REF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -206,13 +205,8 @@ jobs:
 
           echo "### Trivy Scan Output" 
           if [[ -s 'trivy-results.sarif' ]]; then
-            echo "<details><summary>Click to expand</summary>" 
-            echo "" 
-            echo '```' 
             cat trivy-results.sarif 
-            echo '```'
-            echo "</details>" 
           else
-            echo "✅ No vulnerabilities found." 
+            echo "trivy-results.sarif file not found"
           fi
 
