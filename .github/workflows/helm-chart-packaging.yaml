@@ -20,6 +20,8 @@ on:
     #     required: true      
 permissions:
   contents: write 
+  pull-requests: write 
+  issues: write      
 
 jobs:
   publish:
@@ -100,6 +102,9 @@ jobs:
           hide_and_recreate: true
           hide_classify: "OUTDATED"
           path: ${{ env.CHART_PATH }}Chart.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Install Helm-docs and create README file for Helm chart
         run: |
