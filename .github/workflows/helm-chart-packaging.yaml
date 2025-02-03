@@ -41,15 +41,15 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4.2.0
 
-      - name: Update Helm Dependencies
-        run: |
-          cd ${{ inputs.CHART_PATH }}
-          helm dependency update
-
       - name: debug
         run: |
           pwd
           ls -la
+          
+      - name: Update Helm Dependencies
+        run: |
+          cd ${{ inputs.CHART_PATH }}
+          helm dependency update
 
       - name: Lint Helm Chart
         run: |
