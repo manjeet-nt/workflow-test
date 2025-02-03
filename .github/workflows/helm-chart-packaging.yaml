@@ -94,16 +94,6 @@ jobs:
       #       echo "No previous version found. Skipping backward compatibility check."
       #     fi
 
-      - name: Send notification on PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: "Chart Compatibility Check"
-          hide_and_recreate: true
-          hide_classify: "OUTDATED"
-          path: ${{ env.CHART_PATH }}Chart.yaml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Install Helm-docs and create README file for Helm chart
@@ -181,6 +171,40 @@ jobs:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
 
+      - name: merge trivy scan and diff result in single file to show it on PR marocchino/sticky-pull-request-comment
+        id: merge trivy scan and diff file
+        run: |
+          # Write Trivy result and diff into the output file in one go
+          {
+            echo "### Trivy Scan Result"
+            echo "Trivy Scan Result for Security Vulnerabilities:"
+            echo ""
+            cat trivy-results.sarif
+            echo ""
+            echo "----------------------------------------"
+            echo ""
+            echo "### Diff on Comparing Chart with Previous Version"
+            echo "Diff between the new and old chart versions:"
+             if [ -f "${{ env.CHART_PATH }}diff.txt" ]; then
+            echo "### Diff on Comparing Chart with Previous Version"
+            echo "Diff between the new and old chart versions:"
+            echo ""
+            cat ${{ env.CHART_PATH }}diff.txt
+          else
+            echo "No diff file found."
+          fi
+          } > pr_comment.txt
+
+      - name: Send notification on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "Chart Compatibility Check"
+          hide_and_recreate: true
+          hide_classify: "OUTDATED"
+          path: pr_comment.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Set up JFrog CLI
       #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
