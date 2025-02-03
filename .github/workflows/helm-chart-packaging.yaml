@@ -83,14 +83,23 @@ jobs:
       #       helm template ${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz > previous-version.yaml
 
       #       echo "Differences in the both charts template "
-      #       diff -u previous-version.yaml new-version.yaml | awk '
-      #       /^-/ { last_removed=$0; print last_removed; next }
-      #       /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
-      #       '
+            # diff -u previous-version.yaml new-version.yaml | awk '
+            # /^-/ { last_removed=$0; print last_removed; next }
+            # /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
+            # ' > diff.txt
 
       #     else
       #       echo "No previous version found. Skipping backward compatibility check."
       #     fi
+
+      - name: Send notification on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "Chart Compatibility Check"
+          hide_and_recreate: true
+          hide_classify: "OUTDATED"
+          path: ${{ env.CHART_PATH }}Chart.yaml
 
       - name: Install Helm-docs and create README file for Helm chart
         run: |
