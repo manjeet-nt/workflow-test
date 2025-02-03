@@ -119,15 +119,15 @@ jobs:
             PATCH_VERSION=${VERSION_PARTS[2]}
             ((PATCH_VERSION++))
 
-            echo "CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"" >> $GITHUB_ENV
-            echo "up chart version - ${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            
+            UPDATED_CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+            echo $UPDATED_CHART_VERSION
+
             # Construct the new version
-            CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+
             echo "Updated version : ${{ env.CHART_VERSION}}"
-            sed -i "s/^version: .*/version: ${{ env.CHART_VERSION }}/" ${{ env.CHART_PATH }}Chart.yaml
+            sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ env.CHART_PATH }}Chart.yaml
             echo "Updated Chart Minor Version in Chart.yaml"
-            echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
+            echo "CHART_VERSION=$UPDATED_CHART_VERSION" >> $GITHUB_ENV
             echo "VERSION_INCREMENTED=true" >> $GITHUB_ENV  # Set flag if version was incremented
           fi
 
