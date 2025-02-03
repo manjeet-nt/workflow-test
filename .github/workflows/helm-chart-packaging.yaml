@@ -14,6 +14,10 @@ on:
     #     type: string
     #     required: true
     #     default: "chart/karpenter-node/"
+    #   CHART_FILENAME:
+    #     description: "Name of chart.yaml file"
+    #     type: string
+    #     default:: "Chart.yaml"
     # secrets:
     #   ARTIFACTORY_API_TOKEN:
     #     description: 'A token used to communicate with Artifactory'
@@ -31,28 +35,23 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 
 
       - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: latest
+        uses: azure/setup-helm@v4.2.0
 
       - name: Update Helm Dependencies
         run: |
-          cd ${{ env.CHART_PATH }}
+          cd ${{ inputs.CHART_PATH }}
           helm dependency update
 
       - name: Lint Helm Chart
         run: |
-
-          cd ${{ env.CHART_PATH }}
+          cd ${{ inputs.CHART_PATH }}
           helm lint .
 
       - name: Run Helm Tests if present
         run: |
-          cd ${{ env.CHART_PATH }}
+          cd ${{ inputs.CHART_PATH }}
           if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
             echo "Tests found. Running Helm tests..."
             helm test .
@@ -60,13 +59,27 @@ jobs:
             echo "No tests found. Skipping Helm tests."
           fi
 
-      - name: Set Environment Variables from Chart.yaml
+      - name: Set Environment Variables from ${{ input.CHART_FILENAME}}
         run: |
-          cd ${{ env.CHART_PATH }}
-          echo "CHART_NAME=$(grep '^name:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
-          echo "CHART_VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')" >> $GITHUB_ENV
+          cd ${{ inputs.CHART_PATH }}
+          echo "CHART_NAME=$(grep '^name:' ${{ input.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_VERSION=$(grep '^version:' ${{ input.CHART_FILENAME}} | awk '{print $2}')" >> $GITHUB_ENV
 
+      # - name: Set up JFrog CLI
+      #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
 
+      # - name: Configure JFrog CLI
+      #   env:
+      #     ARTIFACTORY_API_TOKEN: ${{ secrets.ARTIFACTORY_API_TOKEN }}
+      #     JFROG_URL: ${{ inputs.jfrog_url }}
+      #   run: |
+
+      #     echo "${ARTIFACTORY_API_TOKEN}" | jf config add test \
+      #       --url="${JFROG_URL}" \
+      #       --interactive=false \
+      #       --access-token-stdin
+
+      
       # - name: Check Backward Compatibility
       #   id: backward-compatibility
       #   run: |
@@ -74,7 +87,7 @@ jobs:
 
       #     # Fetch the previous version of the chart from JFrog Artifactory
       #     git fetch origin main --depth=1  
-      #     PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}Chart.yaml | grep '^version:' | awk '{print $2}')
+      #     PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')
       #     jf rt dl "helm-local/${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" --flat
 
       #     if [[ -f "${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" ]]; then
@@ -88,13 +101,11 @@ jobs:
             # diff -u previous-version.yaml new-version.yaml | awk '
             # /^-/ { last_removed=$0; print last_removed; next }
             # /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
-            # ' > diff.txt
+            # '| tee diff.txt
 
       #     else
       #       echo "No previous version found. Skipping backward compatibility check."
       #     fi
-
-
 
       - name: Install Helm-docs and create README file for Helm chart
         run: |
@@ -107,9 +118,7 @@ jobs:
 
       - name: Increament chart version if user forgot
         run: |
-          # Ensure we have the main branch history
-          git fetch origin main --depth=1  
-          PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}Chart.yaml | grep '^version:' | awk '{print $2}')
+          PREVIOUS_VERSION=$(git show origin/main:./${{ env.CHART_PATH }}${{ input.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
           echo "Previous Chart Version: $PREVIOUS_VERSION"
           if [[ "$PREVIOUS_VERSION" != "$CHART_VERSION" ]]; then
             echo "Chart version has changed!"
@@ -128,20 +137,20 @@ jobs:
             # Construct the new version
 
             echo "Updated version : ${{ env.CHART_VERSION}}"
-            sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ env.CHART_PATH }}Chart.yaml
-            echo "Updated Chart Minor Version in Chart.yaml"
+            sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}
+            echo "Updated Chart Minor Version in ${{ input.CHART_FILENAME}}"
             echo "CHART_VERSION=$UPDATED_CHART_VERSION" >> $GITHUB_ENV
             echo "VERSION_INCREMENTED=true" >> $GITHUB_ENV  # Set flag if version was incremented
           fi
 
-      - name: Commit updated Chart.yaml
-        if: env.VERSION_INCREMENTED == 'true'
+      - name: Commit updated ${{ input.CHART_FILENAME}}
+        if: env.VERSION_INCREMENTED == 'true' && github.event_name == 'pull_request'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git fetch origin 
           git checkout $GITHUB_HEAD_REF  # Checkout the PR branch
-          git add ${{ env.CHART_PATH }}Chart.yaml
+          git add ${{ env.CHART_PATH }}${{ input.CHART_FILENAME}}
           git status
           git commit -m "Auto incremented chart version to ${{ env.CHART_VERSION}}"
           git push origin $GITHUB_HEAD_REF 
@@ -166,7 +175,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-          output: 'trivy-results.sarif'  # Save it in workspace
+          output: 'trivy-results.sarif' 
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
           TRIVY_DISABLE_VEX_NOTICE: true
@@ -203,22 +212,6 @@ jobs:
           hide_and_recreate: true
           hide_classify: "OUTDATED"
           path: pr_comment.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Set up JFrog CLI
-      #   uses: jfrog/setup-jfrog-cli@f748a0599171a192a2668afee8d0497f7c1069df # v4.5.6
-
-      # - name: Configure JFrog CLI
-      #   env:
-      #     ARTIFACTORY_API_TOKEN: ${{ secrets.ARTIFACTORY_API_TOKEN }}
-      #     JFROG_URL: ${{ inputs.jfrog_url }}
-      #   run: |
-
-      #     echo "${ARTIFACTORY_API_TOKEN}" | jf config add test \
-      #       --url="${JFROG_URL}" \
-      #       --interactive=false \
-      #       --access-token-stdin
 
       # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
       #   run: |
