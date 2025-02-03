@@ -99,6 +99,7 @@ jobs:
           tar -xzf helm-docs.tar.gz
           chmod +x helm-docs
           mv helm-docs /usr/local/bin/
+          cd ${{ env.CHART_PATH }}
           helm-docs ${{ env.CHART_PATH }}
 
       - name: Increament chart version if user forgot
@@ -119,7 +120,7 @@ jobs:
 
             # Construct the new version
             CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            sed -i "s/^version: .*/version: ${{ env.CHART_VERSION }}/" ${{ env.CHART_PATH }}Chart.yaml
+            sed -i '' "s/^version: .*/version: ${{ env.CHART_VERSION }}/" ${{ env.CHART_PATH }}Chart.yaml
             echo "Updated Chart Minor Version in Chart.yaml"
             echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
             echo "VERSION_INCREMENTED=true" >> $GITHUB_ENV  # Set flag if version was incremented
@@ -133,6 +134,7 @@ jobs:
           git fetch origin 
           git checkout $GITHUB_HEAD_REF  # Checkout the PR branch
           git add ${{ env.CHART_PATH }}Chart.yaml
+          git status
           git commit -m "Auto incremented chart version to ${{ env.CHART_VERSION}}"
           git push origin $GITHUB_HEAD_REF 
           # git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git HEAD:$GITHUB_HEAD_REF
