@@ -198,16 +198,12 @@ jobs:
           fi
           } > pr_comment.txt
         
-      - name: Check if PR exists for the branch
-        id: check_pr
+      - name: Debug PR list command
         run: |
-          PR_NUMBER=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json number --jq '.[0].number' || echo "")
-          if [[ -n "$PR_NUMBER" ]]; then
-            echo "PR_FOUND=true" >> $GITHUB_ENV
-            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-          else
-            echo "PR_FOUND=false" >> $GITHUB_ENV
-          fi
+          echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
+          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          
+          gh pr list --head "$GITHUB_HEAD_REF" --state open --json number --jq '.[0]' || echo "No PR found"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
