@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       jfrog_url:
-        description: 'URL of Artifactory server'
+        description: 'URL of Artifactory server asas'
         type: string
         default: 'https://nethermind.jfrog.io'
       CHART_PATH:
@@ -220,7 +220,7 @@ jobs:
           hide_classify: "OUTDATED"
           path: pr_comment.txt
           number: ${{ env.PR_NUMBER }}  
-          
+
       # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
       #   run: |
       #     cd ${{ inputs.CHART_PATH }}
