@@ -2,10 +2,6 @@ name: Package Helm Chart
 
 on:
   workflow_call:
-
-  # pull_request:
-  #   branches:
-  #     - main 
     inputs:
       jfrog_url:
         description: 'URL of Artifactory server'
@@ -26,10 +22,7 @@ on:
     #     required: true   
           
 permissions:
-  contents: read
-  # contents: write 
-  # pull-requests: write 
-  # issues: write      
+  contents: read     
 
 jobs:
   publish:
@@ -41,11 +34,6 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4.2.0
 
-      - name: debug
-        run: |
-          pwd
-          ls -la
-          
       - name: Update Helm Dependencies
         run: |
           cd ${{ inputs.CHART_PATH }}
@@ -94,21 +82,21 @@ jobs:
 
       #     # Fetch the previous version of the chart from JFrog Artifactory
       #     git fetch origin main --depth=1  
-      #     PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')
-      #     jf rt dl "helm-local/${{ inputs.CHART_NAME }}-$PREVIOUS_VERSION.tgz" --flat
+      #     echo "PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')" >> $GITHUB_ENV
+      #     jf rt dl "helm-local/${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" --flat
 
-      #     if [[ -f "${{ inputs.CHART_NAME }}-$PREVIOUS_VERSION.tgz" ]]; then
+      #     if [[ -f "${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" ]]; then
       #       echo "Previous version ($PREVIOUS_VERSION) found. Checking for backward compatibility..."
 
       #       # Render templates for the new and previous versions
       #       helm template . > new-version.yaml
-      #       helm template ${{ inputs.CHART_NAME }}-$PREVIOUS_VERSION.tgz > previous-version.yaml
+      #       helm template ${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz > previous-version.yaml
 
       #       echo "Differences in the both charts template "
-            # diff -u previous-version.yaml new-version.yaml | awk '
-            # /^-/ { last_removed=$0; print last_removed; next }
-            # /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
-            # '| tee diff.txt
+      #       diff -u previous-version.yaml new-version.yaml | awk '
+      #       /^-/ { last_removed=$0; print last_removed; next }
+      #       /^\+/ { if (last_removed != "") { print $0; last_removed="" } next }
+      #       '| tee diff.txt
 
       #     else
       #       echo "No previous version found. Skipping backward compatibility check."
@@ -125,25 +113,24 @@ jobs:
 
       - name: Increament chart version if user forgot
         run: |
-          PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
+          # PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
           echo "Previous Chart Version: $PREVIOUS_VERSION"
-          if [[ "$PREVIOUS_VERSION" != "$CHART_VERSION" ]]; then
+          if [[ "$PREVIOUS_VERSION" != "${{ env.CHART_VERSION}}" ]]; then
             echo "Chart version has changed!"
           else
             echo " before Updated version : ${{ env.CHART_VERSION}}"
             # Split the version into major, minor, and patch components
-            IFS='.' read -r -a VERSION_PARTS <<< "$CHART_VERSION"
+            IFS='.' read -r -a VERSION_PARTS <<< "${{ env.CHART_VERSION}}"
             
             # Increment the patch version
             PATCH_VERSION=${VERSION_PARTS[2]}
             ((PATCH_VERSION++))
 
             UPDATED_CHART_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            echo $UPDATED_CHART_VERSION
 
             # Construct the new version
 
-            echo "Updated version : ${{ env.CHART_VERSION}}"
+            echo "Updated version : $UPDATED_CHART_VERSION
             sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}}
             echo "Updated Chart Minor Version in ${{ inputs.CHART_FILENAME}}"
             echo "CHART_VERSION=$UPDATED_CHART_VERSION" >> $GITHUB_ENV
@@ -168,7 +155,7 @@ jobs:
       - name: Package Helm Chart
         run: |
           cd ${{ inputs.CHART_PATH }}
-          helm package . --app-version ${CHART_VERSION}
+          helm package . --app-version ${{ env.CHART_VERSION}}
           ls -la
 
       - name: Run Trivy vulnerability scanner in IaC mode
