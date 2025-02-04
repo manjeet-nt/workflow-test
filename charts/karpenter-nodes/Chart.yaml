@@ -1,5 +1,5 @@
 apiVersion: v2
-description: karpenter nodes
+description: karpenter nodes description
 type: application
 name: karpenter-nodes
 version: 0.0.1
