@@ -198,24 +198,29 @@ jobs:
           fi
           } > pr_comment.txt
         
-      - name: Debug PR list command
+      - name: Check if PR exists for the branch
+        id: check_pr
         run: |
-          echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
-          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
-          
-          gh pr list --head "$GITHUB_HEAD_REF" --state open --json number --jq '.[0]' || echo "No PR found"
+          PR_NUMBER=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json number --jq '.[0].number' || echo "")
+          if [[ -n "$PR_NUMBER" ]]; then
+            echo "PR_FOUND=true" >> $GITHUB_ENV
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          else
+            echo "PR_FOUND=false" >> $GITHUB_ENV
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send notification on PR
-        if: github.event_name == 'pull_request'
+        if:  env.PR_FOUND == 'true'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: "Chart Compatibility Check"
           hide_and_recreate: true
           hide_classify: "OUTDATED"
           path: pr_comment.txt
-
+          number: ${{ env.PR_NUMBER }}  
+          
       # - name: Publish Helm Chart to JFrog if not Already Exists in JFrog
       #   run: |
       #     cd ${{ inputs.CHART_PATH }}
