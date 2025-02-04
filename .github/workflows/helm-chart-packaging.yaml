@@ -82,7 +82,7 @@ jobs:
 
           # Fetch the previous version of the chart from JFrog Artifactory
           git fetch origin main --depth=1  
-          echo "PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')" >> $GITHUB_ENV
+          echo "PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_FILENAME}}| grep '^version:' | awk '{print $2}')" >> $GITHUB_ENV
       #     jf rt dl "helm-local/${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" --flat
 
       #     if [[ -f "${{ env.CHART_NAME }}-$PREVIOUS_VERSION.tgz" ]]; then
