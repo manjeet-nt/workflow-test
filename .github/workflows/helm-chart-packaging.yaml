@@ -197,6 +197,19 @@ jobs:
             echo "No diff file found."
           fi
           } > pr_comment.txt
+        
+      - name: Check if PR exists for the branch
+        id: check_pr
+        run: |
+          PR_NUMBER=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json number --jq '.[0].number' || echo "")
+          if [[ -n "$PR_NUMBER" ]]; then
+            echo "PR_FOUND=true" >> $GITHUB_ENV
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          else
+            echo "PR_FOUND=false" >> $GITHUB_ENV
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send notification on PR
         if: github.event_name == 'pull_request'
