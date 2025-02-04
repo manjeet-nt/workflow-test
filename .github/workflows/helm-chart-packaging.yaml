@@ -113,9 +113,8 @@ jobs:
 
       - name: Increament chart version if user forgot
         run: |
-          # PREVIOUS_VERSION=$(git show origin/main:./${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}} | grep '^version:' | awk '{print $2}')
-          echo "Previous Chart Version: $PREVIOUS_VERSION"
-          if [[ "$PREVIOUS_VERSION" != "${{ env.CHART_VERSION}}" ]]; then
+          echo "Previous Chart Version: ${{ env.PREVIOUS_VERSION }}"
+          if [[ "${{ env.PREVIOUS_VERSION }}" != "${{ env.CHART_VERSION}}" ]]; then
             echo "Chart version has changed!"
           else
             echo " before Updated version : ${{ env.CHART_VERSION}}"
@@ -130,7 +129,7 @@ jobs:
 
             # Construct the new version
 
-            echo "Updated version : $UPDATED_CHART_VERSION
+            echo "Updated version : $UPDATED_CHART_VERSION"
             sed -i "s/^version: .*/version: $UPDATED_CHART_VERSION/" ${{ inputs.CHART_PATH }}${{ inputs.CHART_FILENAME}}
             echo "Updated Chart Minor Version in ${{ inputs.CHART_FILENAME}}"
             echo "CHART_VERSION=$UPDATED_CHART_VERSION" >> $GITHUB_ENV
