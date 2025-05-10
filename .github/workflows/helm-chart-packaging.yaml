@@ -8,7 +8,7 @@ on:
         type: string
         default: 'https://nethermind.jfrog.io'
       CHART_PATH:
-        description: 'Chart path'
+        description: 'Chart path asa'
         type: string
         required: true
         default: "chart/karpenter-node/"
