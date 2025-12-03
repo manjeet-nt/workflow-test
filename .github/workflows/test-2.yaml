@@ -49,11 +49,13 @@ jobs:
 
           # Create JWT (correct flags)
           JWT=$(jwt encode \
-            --secret @key.pem \
+           --secret @key.pem \
             --alg RS256 \
-            --iss "$APP_ID" \
-            --iat "$(date +%s)" \
-            --exp "$(($(date +%s)+600))")
+            '{
+              "iat": '"$(date +%s)"',
+              "exp": '"$(($(date +%s)+600))"',
+              "iss": "2401792"
+            }'
 
           echo "JWT=$JWT"
 
