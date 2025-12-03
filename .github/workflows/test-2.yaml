@@ -1,0 +1,59 @@
+name: Github app token testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      jfrog_url:
+        description: 'URL of Artifactory server'
+        type: string
+        default: 'https://nethermind.jfrog.io'
+      CHART_PATH:
+        description: 'Chart path'
+        type: string
+        required: true
+        default: "chart/karpenter-node/"
+      CHART_FILENAME:
+        description: "Name of chart.yaml file"
+        type: string
+        default: "Chart.yaml"
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: write  
+  pull-requests: write  
+
+jobs:
+  saas_github:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5.0.1
+
+      - name: Generate GitHub App installation token
+        id: gh_app_token
+        run: |
+          echo "Generating JWT..."
+          # Install jwt-cli
+          sudo npm install -g jwt-cli
+          
+          # Create JWT
+          JWT=$(jwt encode --secret "$PRIVATE_KEY" --alg RS256 \
+            --claim "iat=$(date +%s)" \
+            --claim "exp=$(($(date +%s)+600))" \
+            --claim "iss=$APP_ID")
+          
+          echo "Requesting installation token..."
+          TOKEN=$(curl -s -X POST \
+            -H "Authorization: Bearer $JWT" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens \
+            | jq -r .token)
+          
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "token - " + $TOKEN
+          echo "github_env - " + $GITHUB_ENV
+
+      - name: Set environment
+        run: echo "GITHUB_TOKEN=$TOKEN" >> $GITHUB_ENV
+
