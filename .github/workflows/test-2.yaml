@@ -54,8 +54,8 @@ jobs:
             '{
               "iat": '"$(date +%s)"',
               "exp": '"$(($(date +%s)+600))"',
-              "iss": "2401792"
-            }'
+              "iss": "$APP_ID"
+            }')
 
           echo "JWT=$JWT"
 
