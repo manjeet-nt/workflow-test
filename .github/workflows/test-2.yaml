@@ -32,28 +32,36 @@ jobs:
 
       - name: Generate GitHub App installation token
         id: gh_app_token
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+          INSTALLATION_ID: ${{ secrets.INSTALLATION_ID }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
         run: |
           echo "Generating JWT..."
+
           # Install jwt-cli
           sudo npm install -g jwt-cli
-          
-          # Create JWT
-          JWT=$(jwt encode --secret "$PRIVATE_KEY" --alg RS256 \
-            --claim "iat=$(date +%s)" \
-            --claim "exp=$(($(date +%s)+600))" \
-            --claim "iss=$APP_ID")
-          
+
+          # Write private key to a PEM file
+          echo "$PRIVATE_KEY" > key.pem
+          sed -i 's/\\n/\n/g' key.pem
+          chmod 600 key.pem
+
+          # Create JWT (correct flags)
+          JWT=$(jwt encode \
+            --secret @key.pem \
+            --alg RS256 \
+            --iss "$APP_ID" \
+            --iat "$(date +%s)" \
+            --exp "$(($(date +%s)+600))")
+
+          echo "JWT=$JWT"
+
           echo "Requesting installation token..."
           TOKEN=$(curl -s -X POST \
             -H "Authorization: Bearer $JWT" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens \
             | jq -r .token)
-          
+
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "token - " + $TOKEN
-          echo "github_env - " + $GITHUB_ENV
-
-      - name: Set environment
-        run: echo "GITHUB_TOKEN=$TOKEN" >> $GITHUB_ENV
-
